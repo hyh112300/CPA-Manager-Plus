@@ -283,7 +283,7 @@
   background-color: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.45;
   transition: opacity $transition-fast;
 
   &:hover {
@@ -293,6 +293,10 @@
 }
 
 .nodeCard:hover .deleteButton {
+  opacity: 1;
+}
+
+.nodeCard .deleteButton:hover {
   opacity: 1;
 }
 

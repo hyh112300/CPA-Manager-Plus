@@ -367,3 +367,70 @@ func providerSpecForTest(root *yaml.Node, provider string) (*yaml.Node, error) {
 	}
 	return spec, nil
 }
+
+func TestRemoveImportedProvider(t *testing.T) {
+	editor := newTestEditor(t)
+	if _, _, err := editor.ImportNodes([]map[string]any{
+		{"name": "local-1", "type": "ss", "server": "1.1.1.1", "port": 1, "cipher": "aes-256-gcm", "password": "a"},
+	}); err != nil {
+		t.Fatalf("import nodes: %v", err)
+	}
+
+	if err := editor.RemoveImportedProvider(); err != nil {
+		t.Fatalf("remove imported provider: %v", err)
+	}
+
+	config := readConfigMap(t, editor.configPath)
+	providers, _ := config["proxy-providers"].(map[string]any)
+	if _, exists := providers[ImportedProviderName]; exists {
+		t.Fatalf("imported provider still present")
+	}
+	for _, name := range []string{"GLOBAL", "AUTO"} {
+		group := groupByName(t, config, name)
+		if _, exists := group["use"]; exists && containsString(useList(t, group), ImportedProviderName) {
+			t.Fatalf("group %s still references imported provider", name)
+		}
+	}
+	if _, err := os.Stat(editor.importedNodesPath()); !os.IsNotExist(err) {
+		t.Fatalf("imported nodes file was not removed")
+	}
+
+	nodes, err := editor.ImportedNodes()
+	if err != nil {
+		t.Fatalf("read imported nodes after removal: %v", err)
+	}
+	if len(nodes) != 0 {
+		t.Fatalf("unexpected nodes after removal: %v", nodes)
+	}
+}
+
+func TestImportNodesRebuildsImportedProvider(t *testing.T) {
+	editor := newTestEditor(t)
+	if _, _, err := editor.ImportNodes([]map[string]any{
+		{"name": "local-1", "type": "ss", "server": "1.1.1.1", "port": 1, "cipher": "aes-256-gcm", "password": "a"},
+	}); err != nil {
+		t.Fatalf("first import: %v", err)
+	}
+	if err := editor.RemoveImportedProvider(); err != nil {
+		t.Fatalf("remove imported provider: %v", err)
+	}
+	added, _, err := editor.ImportNodes([]map[string]any{
+		{"name": "local-2", "type": "ss", "server": "2.2.2.2", "port": 2, "cipher": "aes-256-gcm", "password": "b"},
+	})
+	if err != nil {
+		t.Fatalf("re-import: %v", err)
+	}
+	if added != 1 {
+		t.Fatalf("unexpected added count: %d", added)
+	}
+
+	config := readConfigMap(t, editor.configPath)
+	providers, _ := config["proxy-providers"].(map[string]any)
+	if _, exists := providers[ImportedProviderName]; !exists {
+		t.Fatalf("imported provider was not rebuilt")
+	}
+	group := groupByName(t, config, "GLOBAL")
+	if !containsString(useList(t, group), ImportedProviderName) {
+		t.Fatalf("group does not reference rebuilt provider: %v", group["use"])
+	}
+}

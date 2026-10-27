@@ -240,7 +240,9 @@ function ProxyNodesContent() {
   const handleRemoveSource = (source: ProxySource) => {
     showConfirmation({
       title: t('proxy_nodes.source_delete_title'),
-      message: t('proxy_nodes.source_delete_confirm', { name: source.name }),
+      message: source.builtin
+        ? t('proxy_nodes.source_delete_local_confirm', { count: source.nodeCount })
+        : t('proxy_nodes.source_delete_confirm', { name: source.name }),
       variant: 'danger',
       confirmText: t('common.confirm'),
       onConfirm: async () => {
@@ -562,16 +564,15 @@ function ProxyNodesContent() {
                           {t('proxy_nodes.source_update')}
                         </Button>
                       )}
-                      {!source.builtin && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => handleRemoveSource(source)}
-                          disabled={Boolean(busySource)}
-                        >
-                          <IconTrash2 size={14} />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => handleRemoveSource(source)}
+                        disabled={Boolean(busySource)}
+                        title={t('proxy_nodes.source_delete_title')}
+                      >
+                        <IconTrash2 size={14} />
+                      </Button>
                     </div>
                   </div>
                 ))}

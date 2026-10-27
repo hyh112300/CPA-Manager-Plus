@@ -393,7 +393,11 @@ func (h *Handler) handleSourceAction(w http.ResponseWriter, r *http.Request, rem
 		response.Error(w, http.StatusBadRequest, errors.New("invalid provider name"))
 		return
 	}
-	if err := editor.RemoveProvider(name); err != nil {
+	remove := editor.RemoveProvider
+	if name == mihomosvc.ImportedProviderName {
+		remove = func(string) error { return editor.RemoveImportedProvider() }
+	}
+	if err := remove(name); err != nil {
 		response.Error(w, http.StatusBadRequest, err)
 		return
 	}

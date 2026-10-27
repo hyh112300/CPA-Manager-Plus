@@ -5443,6 +5443,7 @@
     "restore_hidden": "Restore hidden",
     "restore_done": "Hidden nodes restored",
     "restore_failed": "Restore failed",
-    "delete_sub_node_confirm": "Hide node \"{{name}}\"? It will be added to the subscription exclude filter and stays hidden after the next refresh."
+    "delete_sub_node_confirm": "Hide node \"{{name}}\"? It will be added to the subscription exclude filter and stays hidden after the next refresh.",
+    "source_delete_local_confirm": "Clear and remove all {{count}} locally imported node(s)? They will be recreated on the next import."
   }
 }

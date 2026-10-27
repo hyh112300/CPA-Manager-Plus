@@ -218,6 +218,40 @@ func (e *ConfigEditor) RemoveProvider(name string) error {
 	return nil
 }
 
+// RemoveImportedProvider 清空并移除本地导入 provider，
+// 下次导入节点时会自动重建。
+func (e *ConfigEditor) RemoveImportedProvider() error {
+	if !e.Enabled() {
+		return ErrNotConfigured
+	}
+
+	nodes, err := e.readImportedNodes()
+	if err != nil {
+		return err
+	}
+	if len(nodes) > 0 {
+		if err := e.writeImportedNodes(nil); err != nil {
+			return err
+		}
+	}
+
+	err = e.apply(func(root *yaml.Node) error {
+		if providersNode := mapValue(root, "proxy-providers"); providersNode != nil {
+			deleteMapValue(providersNode, ImportedProviderName)
+		}
+		return e.ensureProviderUsage(root)
+	})
+	if err != nil {
+		return err
+	}
+
+	e.dropExclusions(ImportedProviderName)
+	if removeErr := os.Remove(e.importedNodesPath()); removeErr != nil && !os.IsNotExist(removeErr) {
+		return fmt.Errorf("remove imported nodes file: %w", removeErr)
+	}
+	return nil
+}
+
 // ImportedNodes 返回本地导入 provider 里的节点名。
 func (e *ConfigEditor) ImportedNodes() ([]string, error) {
 	nodes, err := e.readImportedNodes()
@@ -382,6 +416,9 @@ func (e *ConfigEditor) ensureProviderUsage(root *yaml.Node, extra ...string) err
 			if !sequenceContains(useNode, name) {
 				useNode.Content = append(useNode.Content, stringNode(name))
 			}
+		}
+		if len(useNode.Content) == 0 {
+			deleteMapValue(groupNode, "use")
 		}
 	}
 	return nil
