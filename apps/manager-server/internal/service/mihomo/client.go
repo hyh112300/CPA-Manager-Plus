@@ -196,21 +196,25 @@ func (c *Client) Overview(ctx context.Context) (*Overview, error) {
 	}
 
 	providerNodes, providerOf := c.providerProxies(ctx)
-	lookup := make(map[string]proxyEntry, len(payload.Proxies)+len(providerNodes))
-	for name, entry := range payload.Proxies {
-		lookup[name] = entry
-	}
-	for name, entry := range providerNodes {
-		lookup[name] = entry
-	}
 
 	// 找出分组里内嵌的自动选择组（fallback / url-test），面板要单独展示。
 	var autoGroup *proxyEntry
+	seen := make(map[string]struct{}, len(group.All))
 	for _, member := range group.All {
-		entry, exists := lookup[member]
+		if _, duplicated := seen[member]; duplicated {
+			continue
+		}
+		// 同名节点优先取 config.yaml 里的内联定义，避免同一节点出现两次。
+		entry, exists := payload.Proxies[member]
+		provider := ""
+		if !exists {
+			entry, exists = providerNodes[member]
+			provider = providerOf[member]
+		}
 		if !exists {
 			continue
 		}
+		seen[member] = struct{}{}
 		if isAutoGroupType(entry.Type) && autoGroup == nil {
 			copied := entry
 			autoGroup = &copied
@@ -220,7 +224,7 @@ func (c *Client) Overview(ctx context.Context) (*Overview, error) {
 			// 其它自定义策略组：不作为可选节点暴露，避免误切换到嵌套组。
 			continue
 		}
-		overview.Nodes = append(overview.Nodes, buildNodeWithProvider(entry, group.Now, providerOf[entry.Name]))
+		overview.Nodes = append(overview.Nodes, buildNodeWithProvider(entry, group.Now, provider))
 	}
 
 	if autoGroup != nil {

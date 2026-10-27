@@ -218,6 +218,56 @@ func (e *ConfigEditor) RemoveProvider(name string) error {
 	return nil
 }
 
+// RemoveInlineNode 从 config.yaml 的 proxies 与各分组中移除一个内联节点。
+func (e *ConfigEditor) RemoveInlineNode(name string) error {
+	if !e.Enabled() {
+		return ErrNotConfigured
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("node name is required")
+	}
+
+	return e.apply(func(root *yaml.Node) error {
+		proxiesNode := mapValue(root, "proxies")
+		if proxiesNode == nil || proxiesNode.Kind != yaml.SequenceNode {
+			return errors.New("no inline proxies configured")
+		}
+		filtered := make([]*yaml.Node, 0, len(proxiesNode.Content))
+		removed := false
+		for _, item := range proxiesNode.Content {
+			if scalarValue(item, "name") == name {
+				removed = true
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+		if !removed {
+			return fmt.Errorf("node %q is not an inline proxy", name)
+		}
+		proxiesNode.Content = filtered
+
+		// 同步从各分组的 proxies 列表里摘掉，避免分组引用不存在的节点。
+		if groupsNode := mapValue(root, "proxy-groups"); groupsNode != nil && groupsNode.Kind == yaml.SequenceNode {
+			for _, groupNode := range groupsNode.Content {
+				groupProxies := mapValue(groupNode, "proxies")
+				if groupProxies == nil || groupProxies.Kind != yaml.SequenceNode {
+					continue
+				}
+				kept := make([]*yaml.Node, 0, len(groupProxies.Content))
+				for _, item := range groupProxies.Content {
+					if item.Value == name {
+						continue
+					}
+					kept = append(kept, item)
+				}
+				groupProxies.Content = kept
+			}
+		}
+		return nil
+	})
+}
+
 // RemoveImportedProvider 清空并移除本地导入 provider，
 // 下次导入节点时会自动重建。
 func (e *ConfigEditor) RemoveImportedProvider() error {

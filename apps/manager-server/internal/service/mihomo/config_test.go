@@ -434,3 +434,30 @@ func TestImportNodesRebuildsImportedProvider(t *testing.T) {
 		t.Fatalf("group does not reference rebuilt provider: %v", group["use"])
 	}
 }
+
+func TestRemoveInlineNode(t *testing.T) {
+	editor := newTestEditor(t)
+
+	if err := editor.RemoveInlineNode("🇹🇼TW-台湾1"); err != nil {
+		t.Fatalf("remove inline node: %v", err)
+	}
+
+	config := readConfigMap(t, editor.configPath)
+	proxies, _ := config["proxies"].([]any)
+	if len(proxies) != 0 {
+		t.Fatalf("inline proxies not removed: %#v", proxies)
+	}
+	for _, groupName := range []string{"GLOBAL", "AUTO"} {
+		group := groupByName(t, config, groupName)
+		raw, _ := group["proxies"].([]any)
+		for _, item := range raw {
+			if item == "🇹🇼TW-台湾1" {
+				t.Fatalf("group %s still references removed node", groupName)
+			}
+		}
+	}
+
+	if err := editor.RemoveInlineNode("not-exists"); err == nil {
+		t.Fatal("expected error for unknown inline node")
+	}
+}

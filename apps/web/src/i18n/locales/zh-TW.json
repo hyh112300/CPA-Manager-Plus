@@ -5439,6 +5439,7 @@
     "restore_done": "已恢復隱藏的節點",
     "restore_failed": "恢復失敗",
     "delete_sub_node_confirm": "確定隱藏節點「{{name}}」？該節點會被寫入訂閱的排除規則，重新拉取訂閱後依然隱藏。",
-    "source_delete_local_confirm": "確定清空並移除本機匯入的 {{count}} 個節點？下次匯入會自動重建。"
+    "source_delete_local_confirm": "確定清空並移除本機匯入的 {{count}} 個節點？下次匯入會自動重建。",
+    "delete_inline_node_confirm": "確定刪除內建節點「{{name}}」？會從 config.yaml 的 proxies 和各分組中移除，操作前會自動備份設定。"
   }
 }

@@ -228,6 +228,14 @@ export const proxyNodesApi = {
       );
     }),
 
+  removeInlineNode: (base: string, name: string, managementKey?: string): Promise<void> =>
+    request(async () => {
+      await axios.delete(buildUrl(base, `${NODES_PATH}/nodes/${encodeURIComponent(name)}`), {
+        timeout: REQUEST_TIMEOUT_MS_LOCAL,
+        headers: authHeaders(managementKey),
+      });
+    }),
+
   restoreSource: (base: string, provider: string, managementKey?: string): Promise<void> =>
     request(async () => {
       await axios.post(

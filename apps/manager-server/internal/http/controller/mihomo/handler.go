@@ -514,9 +514,14 @@ func (h *Handler) handleNodeAction(w http.ResponseWriter, r *http.Request, remai
 		response.Error(w, http.StatusBadRequest, errors.New("invalid node name"))
 		return
 	}
-	if err := editor.RemoveImportedNode(name); err != nil {
+	if err := editor.RemoveInlineNode(name); err != nil {
 		response.Error(w, http.StatusBadRequest, err)
 		return
+	}
+	if h.App.MihomoService != nil && h.App.MihomoService.Enabled() {
+		ctx, cancel := contextWithTimeout(r, 5*time.Second)
+		defer cancel()
+		h.App.MihomoService.WaitForNodesGone(ctx, []string{name}, 3*time.Second)
 	}
 	response.JSON(w, http.StatusOK, map[string]any{"ok": true})
 }

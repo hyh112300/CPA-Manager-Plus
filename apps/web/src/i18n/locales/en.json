@@ -5444,6 +5444,7 @@
     "restore_done": "Hidden nodes restored",
     "restore_failed": "Restore failed",
     "delete_sub_node_confirm": "Hide node \"{{name}}\"? It will be added to the subscription exclude filter and stays hidden after the next refresh.",
-    "source_delete_local_confirm": "Clear and remove all {{count}} locally imported node(s)? They will be recreated on the next import."
+    "source_delete_local_confirm": "Clear and remove all {{count}} locally imported node(s)? They will be recreated on the next import.",
+    "delete_inline_node_confirm": "Delete built-in node \"{{name}}\"? It will be removed from proxies and every group in config.yaml; the config is backed up first."
   }
 }

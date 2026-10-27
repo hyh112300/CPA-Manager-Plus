@@ -185,18 +185,25 @@ function ProxyNodesContent() {
   };
 
   const handleDeleteNode = (node: ProxyNode) => {
-    if (!node.provider) return;
-    const isImported = node.provider === IMPORTED_PROVIDER;
+    if (!canEdit) return;
+    const { provider } = node;
+    const message = !provider
+      ? t('proxy_nodes.delete_inline_node_confirm', { name: node.name })
+      : provider === IMPORTED_PROVIDER
+        ? t('proxy_nodes.delete_node_confirm', { name: node.name })
+        : t('proxy_nodes.delete_sub_node_confirm', { name: node.name });
     showConfirmation({
       title: t('proxy_nodes.delete_node_title'),
-      message: isImported
-        ? t('proxy_nodes.delete_node_confirm', { name: node.name })
-        : t('proxy_nodes.delete_sub_node_confirm', { name: node.name }),
+      message,
       variant: 'danger',
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await proxyNodesApi.removeNode(base, node.provider as string, node.name, managementKey);
+          if (provider) {
+            await proxyNodesApi.removeNode(base, provider, node.name, managementKey);
+          } else {
+            await proxyNodesApi.removeInlineNode(base, node.name, managementKey);
+          }
           showNotification(t('proxy_nodes.delete_node_success'), 'success');
           await load();
         } catch (err: unknown) {
@@ -488,7 +495,7 @@ function ProxyNodesContent() {
                           node={node}
                           switching={pendingName === node.name}
                           disabled={Boolean(pendingName) || checking}
-                          deletable={canEdit && Boolean(node.provider)}
+                          deletable={canEdit}
                           onSelect={() => void handleSelect(node.name)}
                           onDelete={() => handleDeleteNode(node)}
                         />
