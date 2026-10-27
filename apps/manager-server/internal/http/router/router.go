@@ -12,6 +12,7 @@ import (
 	dashboardcontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/dashboard"
 	healthcontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/health"
 	managerconfigcontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/managerconfig"
+	mihomocontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/mihomo"
 	modelpricecontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/modelprice"
 	monitoringcontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/monitoring"
 	panelcontroller "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/http/controller/panel"
@@ -42,6 +43,7 @@ func New(appCtx *app.Context) http.Handler {
 	monitoringHandler := &monitoringcontroller.Handler{App: appCtx}
 	quotaSnapshotHandler := &quotasnapshotcontroller.Handler{App: appCtx}
 	proxyHandler := &proxycontroller.Handler{App: appCtx}
+	mihomoHandler := &mihomocontroller.Handler{App: appCtx}
 	panelHandler := &panelcontroller.Handler{App: appCtx}
 
 	mux := http.NewServeMux()
@@ -59,7 +61,7 @@ func New(appCtx *app.Context) http.Handler {
 	mux.HandleFunc("/management.html", panelHandler.ManagementHTML)
 	mux.HandleFunc("/favicon.ico", panelHandler.Favicon)
 	mux.HandleFunc("/apple-touch-icon.png", panelHandler.AppleTouchIcon)
-	mux.HandleFunc("/", rootHandler(appCtx, usageHandler, modelPriceHandler, apiKeyAliasHandler, accountActionHandler, codexInspectionHandler, dashboardHandler, monitoringHandler, quotaSnapshotHandler, managerConfigHandler, proxyHandler))
+	mux.HandleFunc("/", rootHandler(appCtx, usageHandler, modelPriceHandler, apiKeyAliasHandler, accountActionHandler, codexInspectionHandler, dashboardHandler, monitoringHandler, quotaSnapshotHandler, managerConfigHandler, proxyHandler, mihomoHandler))
 
 	return middleware.Recovery(middleware.RequestLogger(mux))
 }
@@ -76,6 +78,7 @@ func rootHandler(
 	quotaSnapshotHandler *quotasnapshotcontroller.Handler,
 	managerConfigHandler *managerconfigcontroller.Handler,
 	proxyHandler *proxycontroller.Handler,
+	mihomoHandler *mihomocontroller.Handler,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -120,6 +123,10 @@ func rootHandler(
 		}
 		if r.URL.Path == "/v0/management/cpa-connection/validate" {
 			middleware.WithCORS(appCtx.Config, managerConfigHandler.ValidateCPAConnection)(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/v0/management/proxy-nodes") {
+			middleware.WithCORS(appCtx.Config, mihomoHandler.Handle)(w, r)
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/v0/management/") {

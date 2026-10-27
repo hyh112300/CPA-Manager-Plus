@@ -21,6 +21,7 @@ import (
 	"github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/cpaauthfiles"
 	dashboardsvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/dashboard"
 	managerconfigsvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/managerconfig"
+	mihomosvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/mihomo"
 	modelpricesvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/modelprice"
 	monitoringsvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/monitoring"
 	panelsvc "github.com/seakee/cpa-manager-plus/apps/manager-server/internal/service/panel"
@@ -70,6 +71,8 @@ type Context struct {
 	AuthFileMutationCoordinator    *cpaauthfiles.MutationCoordinator
 	QuotaCooldownRecoveryService   QuotaCooldownRecoveryService
 	ProxyService                   *proxysvc.Service
+	MihomoService                  *mihomosvc.Client
+	MihomoConfig                   *mihomosvc.ConfigEditor
 	PanelService                   *panelsvc.Service
 	AutomationRuntimeService       AutomationRuntimeService
 	DatabaseMaintenance            DatabaseMaintenanceStatusProvider
@@ -164,6 +167,12 @@ func fromExisting(
 		AggregateReadsEnabled: cfg.DashboardHourlyRollupEnabled,
 	}))
 	authFileMutationCoordinator := cpaauthfiles.NewMutationCoordinator()
+	mihomoClient := mihomosvc.New(mihomosvc.Options{
+		Controller: cfg.MihomoController,
+		Secret:     cfg.MihomoSecret,
+		Group:      cfg.MihomoGroup,
+		TestURL:    cfg.MihomoTestURL,
+	})
 	return &Context{
 		UpdateCheckService:   updatechecksvc.New(st, buildinfo.Version, buildinfo.SourceCommit, os.Getenv("CPAMP_UPDATE_CHECK_ENABLED") != "false"),
 		Config:               cfg,
@@ -198,6 +207,15 @@ func fromExisting(
 			authFileMutationCoordinator,
 			st,
 		),
+		MihomoService: mihomoClient,
+		MihomoConfig: mihomosvc.NewConfigEditor(mihomosvc.ConfigOptions{
+			ConfigPath:   cfg.MihomoConfigPath,
+			ProvidersDir: cfg.MihomoProvidersDir,
+			BinaryPath:   cfg.MihomoBinaryPath,
+			Group:        cfg.MihomoGroup,
+			TestURL:      cfg.MihomoTestURL,
+			Reloader:     mihomoClient,
+		}),
 		PanelService:             panelsvc.New(cfg.PanelPath, embeddedPanel),
 		AutomationRuntimeService: runtimeService,
 	}

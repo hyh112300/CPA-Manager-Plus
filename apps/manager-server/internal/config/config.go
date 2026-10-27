@@ -38,6 +38,13 @@ type Config struct {
 	AdminKey                     string
 	DataKey                      string
 	DataKeyPath                  string
+	MihomoController             string
+	MihomoSecret                 string
+	MihomoGroup                  string
+	MihomoTestURL                string
+	MihomoConfigPath             string
+	MihomoProvidersDir           string
+	MihomoBinaryPath             string
 	CollectorMode                string
 	Queue                        string
 	PopSide                      string
@@ -77,6 +84,12 @@ type fileConfig struct {
 	AdminKeyFile                 string   `json:"adminKeyFile,omitempty"`
 	DataKeyFile                  string   `json:"dataKeyFile,omitempty"`
 	DataKeyPath                  string   `json:"dataKeyPath,omitempty"`
+	MihomoController             string   `json:"mihomoController,omitempty"`
+	MihomoGroup                  string   `json:"mihomoGroup,omitempty"`
+	MihomoTestURL                string   `json:"mihomoTestUrl,omitempty"`
+	MihomoConfigPath             string   `json:"mihomoConfigPath,omitempty"`
+	MihomoProvidersDir           string   `json:"mihomoProvidersDir,omitempty"`
+	MihomoBinaryPath             string   `json:"mihomoBinaryPath,omitempty"`
 	CollectorMode                string   `json:"collectorMode,omitempty"`
 	Queue                        string   `json:"queue,omitempty"`
 	PopSide                      string   `json:"popSide,omitempty"`
@@ -163,6 +176,13 @@ func LoadWithOptions(options LoadOptions) (Config, error) {
 		AdminKey:                     readSecret("CPA_MANAGER_ADMIN_KEY", "CPA_MANAGER_ADMIN_KEY_FILE", adminKeyFile),
 		DataKey:                      readSecret("CPA_MANAGER_DATA_KEY", "CPA_MANAGER_DATA_KEY_FILE", dataKeyFile),
 		DataKeyPath:                  env("CPA_MANAGER_DATA_KEY_PATH", dataKeyPath),
+		MihomoController:             env("MIHOMO_CONTROLLER", cfgFile.MihomoController),
+		MihomoSecret:                 env("MIHOMO_SECRET", ""),
+		MihomoGroup:                  env("MIHOMO_GROUP", stringFallback(cfgFile.MihomoGroup, "GLOBAL")),
+		MihomoTestURL:                env("MIHOMO_TEST_URL", cfgFile.MihomoTestURL),
+		MihomoConfigPath:             env("MIHOMO_CONFIG_PATH", cfgFile.MihomoConfigPath),
+		MihomoProvidersDir:           env("MIHOMO_PROVIDERS_DIR", cfgFile.MihomoProvidersDir),
+		MihomoBinaryPath:             env("MIHOMO_BIN", cfgFile.MihomoBinaryPath),
 		CollectorMode:                normalizeCollectorMode(env("USAGE_COLLECTOR_MODE", stringFallback(cfgFile.CollectorMode, "auto"))),
 		Queue:                        env("USAGE_RESP_QUEUE", stringFallback(cfgFile.Queue, "usage")),
 		PopSide:                      env("USAGE_RESP_POP_SIDE", stringFallback(cfgFile.PopSide, "right")),

@@ -1,0 +1,398 @@
+.container {
+  width: 100%;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 $spacing-md 0;
+}
+
+.notice {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background-color: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.noticeWarning {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  border: 1px solid var(--warning-color);
+  background-color: color-mix(in srgb, var(--warning-color) 12%, transparent);
+  color: var(--text-primary);
+  font-size: 13px;
+  margin-bottom: $spacing-md;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background-color: var(--surface-subtle);
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.summaryValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.autoRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding-bottom: $spacing-md;
+  margin-bottom: $spacing-md;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.autoHint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.nodeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: $spacing-md;
+}
+
+.nodeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  border-radius: $radius-lg;
+  background-color: var(--surface-subtle);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color $transition-fast,
+    transform $transition-fast,
+    box-shadow $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: $shadow-sm;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+.nodeCardActive {
+  border-color: var(--primary-color);
+  box-shadow: inset 0 0 0 1px var(--primary-color);
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.nodeName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: $radius-full;
+  background-color: var(--primary-color);
+  color: #fff;
+  font-size: 11px;
+}
+
+.nodeMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.nodeType {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.delay {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.delay_fast {
+  color: var(--success-color);
+}
+
+.delay_ok {
+  color: var(--warning-color);
+}
+
+.delay_slow {
+  color: var(--danger-color);
+}
+
+.delay_unknown {
+  color: var(--text-secondary);
+}
+
+.deadHint {
+  font-size: 11px;
+  color: var(--danger-color);
+}
+
+.autoBadge {
+  position: absolute;
+  top: -8px;
+  right: $spacing-md;
+  padding: 1px 8px;
+  border-radius: $radius-full;
+  background-color: var(--warning-color);
+  color: #fff;
+  font-size: 10px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-lg;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.nodeBadges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  padding-right: 18px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.badgeMuted {
+  display: inline-flex;
+  align-items: center;
+  max-width: 140px;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badgeActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background-color: var(--primary-color);
+  color: #fff;
+  font-size: 11px;
+}
+
+.badgeDanger {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background-color: color-mix(in srgb, var(--danger-color) 14%, transparent);
+  color: var(--danger-color);
+  font-size: 11px;
+}
+
+.deleteButton {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: $radius-full;
+  background-color: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--danger-color) 16%, transparent);
+    color: var(--danger-color);
+  }
+}
+
+.nodeCard:hover .deleteButton {
+  opacity: 1;
+}
+
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.sourceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid var(--border-subtle);
+  border-radius: $radius-md;
+  background-color: var(--surface-subtle);
+}
+
+.sourceMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sourceName {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sourceSub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.drawerFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: $radius-md;
+  background-color: var(--surface-subtle);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}

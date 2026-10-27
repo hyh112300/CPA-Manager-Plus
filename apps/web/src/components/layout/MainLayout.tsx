@@ -26,6 +26,7 @@ import {
   IconSidebarProviders,
   IconSidebarSystem,
   IconSidebarUsage,
+  IconSatellite,
 } from '@/components/ui/icons';
 import {
   CPAMP_SYMBOL_COLOR_PNG_URL,
@@ -70,6 +71,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   config: <IconSidebarConfig size={SIDEBAR_ICON_SIZE} />,
   logs: <IconSidebarLogs size={SIDEBAR_ICON_SIZE} />,
   system: <IconSidebarSystem size={SIDEBAR_ICON_SIZE} />,
+  proxyNodes: <IconSatellite size={SIDEBAR_ICON_SIZE} />,
 };
 
 // Header action icons - smaller size for header buttons
@@ -546,6 +548,12 @@ function MainLayoutContent({ routeBase = '', demoMode = false }: MainLayoutProps
         }
       : null;
   const operationNavItems: NavItem[] = [
+    {
+      path: '/proxy-nodes',
+      label: t('nav.proxy_nodes', { defaultValue: 'Proxy Nodes' }),
+      shortLabel: navShortLabel('nav.proxy_nodes', t('nav.proxy_nodes', { defaultValue: 'Proxy Nodes' })),
+      icon: sidebarIcons.proxyNodes,
+    },
     {
       path: '/logs',
       label: t('nav.logs'),
