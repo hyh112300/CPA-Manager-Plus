@@ -1,6 +1,7 @@
 package mihomo
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -233,6 +234,21 @@ func TestAddAndRemoveSubscription(t *testing.T) {
 	}
 }
 
+func TestSanitizeProviderNameKeepsUnicode(t *testing.T) {
+	cases := map[string]string{
+		"分类测试":        "分类测试",
+		"Airport A":   "airport-a",
+		"  spaced  ":  "spaced",
+		"bad/name\\x": "badnamex",
+		"":            "",
+	}
+	for input, expected := range cases {
+		if actual := sanitizeProviderName(input); actual != expected {
+			t.Fatalf("sanitize(%q) = %q, want %q", input, actual, expected)
+		}
+	}
+}
+
 func TestAddSubscriptionRejectsInvalidURL(t *testing.T) {
 	editor := newTestEditor(t)
 	if _, err := editor.AddSubscription("bad", "file:///etc/passwd", 0); err == nil {
@@ -257,4 +273,97 @@ func TestExtractNodesFromYAML(t *testing.T) {
 	if _, err := ExtractNodesFromYAML([]byte("nothing: here\n")); err == nil {
 		t.Fatal("expected error for yaml without proxies")
 	}
+}
+
+func TestHideAndRestoreProviderNodes(t *testing.T) {
+	editor := newTestEditor(t)
+	if _, err := editor.AddSubscription("Sub A", "https://example.com/sub", 600); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+
+	// 模拟手工写在 provider 上的 exclude-filter，必须被保留
+	if err := editor.apply(func(root *yaml.Node) error {
+		spec, err := providerSpecForTest(root, "sub-a")
+		if err != nil {
+			return err
+		}
+		setMapValue(spec, "exclude-filter", stringNode("(?i)广告"))
+		return nil
+	}); err != nil {
+		t.Fatalf("seed base exclude filter: %v", err)
+	}
+
+	if err := editor.HideProviderNode("sub-a", "🇭🇰HK-香港1"); err != nil {
+		t.Fatalf("hide node: %v", err)
+	}
+	if err := editor.HideProviderNode("sub-a", "日本 03 | 高级专线"); err != nil {
+		t.Fatalf("hide node with regex chars: %v", err)
+	}
+	// 重复屏蔽应幂等
+	if err := editor.HideProviderNode("sub-a", "🇭🇰HK-香港1"); err != nil {
+		t.Fatalf("hide duplicate: %v", err)
+	}
+
+	exclusions, err := editor.Exclusions()
+	if err != nil {
+		t.Fatalf("read exclusions: %v", err)
+	}
+	names := exclusions["sub-a"]
+	if len(names) != 2 {
+		t.Fatalf("unexpected exclusions: %#v", names)
+	}
+
+	config := readConfigMap(t, editor.configPath)
+	spec, ok := config["proxy-providers"].(map[string]any)["sub-a"].(map[string]any)
+	if !ok {
+		t.Fatalf("provider spec missing")
+	}
+	filter, _ := spec["exclude-filter"].(string)
+	if !strings.Contains(filter, "(?i)广告") {
+		t.Fatalf("base exclude filter was dropped: %q", filter)
+	}
+	if !strings.Contains(filter, "HK-香港1") || !strings.Contains(filter, "日本 03") {
+		t.Fatalf("excluded nodes missing from filter: %q", filter)
+	}
+	if !strings.Contains(filter, `日本 03 \| 高级专线`) {
+		t.Fatalf("regex special characters were not escaped: %q", filter)
+	}
+
+	if err := editor.RestoreProviderNodes("sub-a"); err != nil {
+		t.Fatalf("restore nodes: %v", err)
+	}
+	exclusions, err = editor.Exclusions()
+	if err != nil {
+		t.Fatalf("read exclusions after restore: %v", err)
+	}
+	if len(exclusions["sub-a"]) != 0 {
+		t.Fatalf("exclusions were not cleared: %#v", exclusions["sub-a"])
+	}
+	config = readConfigMap(t, editor.configPath)
+	spec, _ = config["proxy-providers"].(map[string]any)["sub-a"].(map[string]any)
+	if filter, _ := spec["exclude-filter"].(string); filter != "(?i)广告" {
+		t.Fatalf("base exclude filter was not restored: %q", filter)
+	}
+}
+
+func TestHideProviderNodeErrors(t *testing.T) {
+	editor := newTestEditor(t)
+	if err := editor.HideProviderNode("missing", "x"); err == nil {
+		t.Fatal("expected error for unknown provider")
+	}
+	if err := editor.RestoreProviderNodes("missing"); err != nil {
+		t.Fatalf("restore on unknown provider should be a no-op: %v", err)
+	}
+}
+
+func providerSpecForTest(root *yaml.Node, provider string) (*yaml.Node, error) {
+	providers := mapValue(root, "proxy-providers")
+	if providers == nil {
+		return nil, fmt.Errorf("no proxy-providers")
+	}
+	spec := mapValue(providers, provider)
+	if spec == nil {
+		return nil, fmt.Errorf("provider %s not found", provider)
+	}
+	return spec, nil
 }

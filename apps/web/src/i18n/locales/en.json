@@ -5434,6 +5434,15 @@
     "delete_node_success": "Node deleted",
     "delete_node_failed": "Failed to delete node",
     "switch_success": "Switched to {{name}}",
-    "switch_failed": "Failed to switch node"
+    "switch_failed": "Failed to switch node",
+    "group_strategy": "Strategy groups",
+    "group_local": "Local import",
+    "group_inline": "Built-in (config.yaml)",
+    "group_hidden": "{{count}} hidden",
+    "group_all_hidden": "All nodes from this source are hidden",
+    "restore_hidden": "Restore hidden",
+    "restore_done": "Hidden nodes restored",
+    "restore_failed": "Restore failed",
+    "delete_sub_node_confirm": "Hide node \"{{name}}\"? It will be added to the subscription exclude filter and stays hidden after the next refresh."
   }
 }

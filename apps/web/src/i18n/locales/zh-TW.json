@@ -5429,6 +5429,15 @@
     "delete_node_success": "節點已刪除",
     "delete_node_failed": "刪除節點失敗",
     "switch_success": "已切換到 {{name}}",
-    "switch_failed": "切換節點失敗"
+    "switch_failed": "切換節點失敗",
+    "group_strategy": "策略組",
+    "group_local": "本機匯入",
+    "group_inline": "內建節點（config.yaml）",
+    "group_hidden": "{{count}} 個已隱藏",
+    "group_all_hidden": "該來源的節點已全部隱藏",
+    "restore_hidden": "恢復已隱藏",
+    "restore_done": "已恢復隱藏的節點",
+    "restore_failed": "恢復失敗",
+    "delete_sub_node_confirm": "確定隱藏節點「{{name}}」？該節點會被寫入訂閱的排除規則，重新拉取訂閱後依然隱藏。"
   }
 }

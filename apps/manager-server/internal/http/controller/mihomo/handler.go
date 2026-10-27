@@ -38,13 +38,14 @@ type overviewResponse struct {
 }
 
 type sourceItem struct {
-	Name            string `json:"name"`
-	Type            string `json:"type"`
-	URL             string `json:"url,omitempty"`
-	IntervalSeconds int    `json:"intervalSeconds,omitempty"`
-	UpdatedAt       string `json:"updatedAt,omitempty"`
-	NodeCount       int    `json:"nodeCount"`
-	Builtin         bool   `json:"builtin"`
+	Name            string   `json:"name"`
+	Type            string   `json:"type"`
+	URL             string   `json:"url,omitempty"`
+	IntervalSeconds int      `json:"intervalSeconds,omitempty"`
+	UpdatedAt       string   `json:"updatedAt,omitempty"`
+	NodeCount       int      `json:"nodeCount"`
+	Excluded        []string `json:"excluded,omitempty"`
+	Builtin         bool     `json:"builtin"`
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -245,6 +246,12 @@ func (h *Handler) handleListSources(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	exclusions, err := editor.Exclusions()
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	runtime := map[string]mihomosvc.ProviderRuntime{}
 	if h.App.MihomoService != nil && h.App.MihomoService.Enabled() {
 		if items, runtimeErr := h.App.MihomoService.Providers(r.Context()); runtimeErr == nil {
@@ -261,6 +268,7 @@ func (h *Handler) handleListSources(w http.ResponseWriter, r *http.Request) {
 			Type:            provider.Type,
 			URL:             provider.URL,
 			IntervalSeconds: provider.IntervalSeconds,
+			Excluded:        exclusions[provider.Name],
 			Builtin:         provider.Builtin,
 		}
 		if state, ok := runtime[provider.Name]; ok {
@@ -308,6 +316,50 @@ func (h *Handler) handleSourceAction(w http.ResponseWriter, r *http.Request, rem
 		return
 	}
 
+	// {provider}/nodes/{nodeName}
+	if providerPart, nodePart, found := strings.Cut(remainder, "/nodes/"); found {
+		if r.Method != http.MethodDelete {
+			response.MethodNotAllowed(w)
+			return
+		}
+		provider, err := url.PathUnescape(providerPart)
+		if err != nil || strings.TrimSpace(provider) == "" {
+			response.Error(w, http.StatusBadRequest, errors.New("invalid provider name"))
+			return
+		}
+		nodeName, err := url.PathUnescape(nodePart)
+		if err != nil || strings.TrimSpace(nodeName) == "" {
+			response.Error(w, http.StatusBadRequest, errors.New("invalid node name"))
+			return
+		}
+		if err := h.removeProviderNode(r, editor, provider, nodeName); err != nil {
+			response.Error(w, http.StatusBadRequest, err)
+			return
+		}
+		response.JSON(w, http.StatusOK, map[string]any{"ok": true})
+		return
+	}
+
+	// {provider}/restore
+	if strings.HasSuffix(remainder, "/restore") {
+		if r.Method != http.MethodPost {
+			response.MethodNotAllowed(w)
+			return
+		}
+		provider, err := url.PathUnescape(strings.TrimSuffix(remainder, "/restore"))
+		if err != nil || strings.TrimSpace(provider) == "" {
+			response.Error(w, http.StatusBadRequest, errors.New("invalid provider name"))
+			return
+		}
+		if err := editor.RestoreProviderNodes(provider); err != nil {
+			response.Error(w, http.StatusBadRequest, err)
+			return
+		}
+		response.JSON(w, http.StatusOK, map[string]any{"ok": true})
+		return
+	}
+
+	// {provider}/update
 	if strings.HasSuffix(remainder, "/update") {
 		if r.Method != http.MethodPost {
 			response.MethodNotAllowed(w)
@@ -346,6 +398,24 @@ func (h *Handler) handleSourceAction(w http.ResponseWriter, r *http.Request, rem
 		return
 	}
 	response.JSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// removeProviderNode 删除 provider 内的单个节点：
+// 本地导入的 provider 直接从文件里摘除，订阅型 provider 写入 exclude-filter。
+func (h *Handler) removeProviderNode(r *http.Request, editor *mihomosvc.ConfigEditor, provider string, nodeName string) error {
+	if provider == mihomosvc.ImportedProviderName {
+		return editor.RemoveImportedNode(nodeName)
+	}
+
+	if err := editor.HideProviderNode(provider, nodeName); err != nil {
+		return err
+	}
+	if h.App.MihomoService != nil && h.App.MihomoService.Enabled() {
+		ctx, cancel := contextWithTimeout(r, 5*time.Second)
+		defer cancel()
+		h.App.MihomoService.WaitForNodesGone(ctx, []string{nodeName}, 3*time.Second)
+	}
+	return nil
 }
 
 func (h *Handler) handleListImportedNodes(w http.ResponseWriter, r *http.Request) {

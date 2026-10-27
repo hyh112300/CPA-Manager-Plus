@@ -57,6 +57,7 @@ export interface ProxySource {
   intervalSeconds?: number;
   updatedAt?: string;
   nodeCount: number;
+  excluded?: string[];
   builtin: boolean;
 }
 
@@ -85,7 +86,11 @@ const authHeaders = (managementKey?: string) =>
 const readErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
-    if (data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string') {
+    if (
+      data &&
+      typeof data === 'object' &&
+      typeof (data as { error?: unknown }).error === 'string'
+    ) {
       return (data as { error: string }).error;
     }
     return error.message;
@@ -111,7 +116,11 @@ export const proxyNodesApi = {
       return response.data;
     }),
 
-  select: (base: string, name: string, managementKey?: string): Promise<ProxyNodesOverview | null> =>
+  select: (
+    base: string,
+    name: string,
+    managementKey?: string
+  ): Promise<ProxyNodesOverview | null> =>
     request(async () => {
       const response = await axios.post<{ ok: boolean; overview?: ProxyNodesOverview }>(
         buildUrl(base, `${NODES_PATH}/select`),
@@ -183,10 +192,10 @@ export const proxyNodesApi = {
 
   removeSource: (base: string, name: string, managementKey?: string): Promise<void> =>
     request(async () => {
-      await axios.delete(
-        buildUrl(base, `${NODES_PATH}/sources/${encodeURIComponent(name)}`),
-        { timeout: REQUEST_TIMEOUT_MS_LOCAL, headers: authHeaders(managementKey) }
-      );
+      await axios.delete(buildUrl(base, `${NODES_PATH}/sources/${encodeURIComponent(name)}`), {
+        timeout: REQUEST_TIMEOUT_MS_LOCAL,
+        headers: authHeaders(managementKey),
+      });
     }),
 
   importNodes: (
@@ -203,11 +212,28 @@ export const proxyNodesApi = {
       return response.data;
     }),
 
-  removeNode: (base: string, name: string, managementKey?: string): Promise<void> =>
+  removeNode: (
+    base: string,
+    provider: string,
+    name: string,
+    managementKey?: string
+  ): Promise<void> =>
     request(async () => {
-      await axios.delete(buildUrl(base, `${NODES_PATH}/nodes/${encodeURIComponent(name)}`), {
-        timeout: REQUEST_TIMEOUT_MS_LOCAL,
-        headers: authHeaders(managementKey),
-      });
+      await axios.delete(
+        buildUrl(
+          base,
+          `${NODES_PATH}/sources/${encodeURIComponent(provider)}/nodes/${encodeURIComponent(name)}`
+        ),
+        { timeout: REQUEST_TIMEOUT_MS_LOCAL, headers: authHeaders(managementKey) }
+      );
+    }),
+
+  restoreSource: (base: string, provider: string, managementKey?: string): Promise<void> =>
+    request(async () => {
+      await axios.post(
+        buildUrl(base, `${NODES_PATH}/sources/${encodeURIComponent(provider)}/restore`),
+        {},
+        { timeout: REQUEST_TIMEOUT_MS_LOCAL, headers: authHeaders(managementKey) }
+      );
     }),
 };

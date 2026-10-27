@@ -111,6 +111,41 @@ func (c *Client) GroupDelay(ctx context.Context, name string, timeout time.Durat
 	return payload, nil
 }
 
+// WaitForNodesGone 轮询等待节点从分组里消失（exclude-filter 生效是异步的）。
+func (c *Client) WaitForNodesGone(ctx context.Context, names []string, timeout time.Duration) {
+	if !c.Enabled() || len(names) == 0 {
+		return
+	}
+	deadline := time.Now().Add(timeout)
+	for {
+		overview, err := c.Overview(ctx)
+		if err == nil {
+			present := make(map[string]struct{}, len(overview.Nodes))
+			for _, node := range overview.Nodes {
+				present[node.Name] = struct{}{}
+			}
+			remaining := false
+			for _, name := range names {
+				if _, ok := present[name]; ok {
+					remaining = true
+					break
+				}
+			}
+			if !remaining {
+				return
+			}
+		}
+		if time.Now().After(deadline) {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(150 * time.Millisecond):
+		}
+	}
+}
+
 // HealthCheckResult 是一次探活的汇总。
 type HealthCheckResult struct {
 	Delays    map[string]int      `json:"delays"`

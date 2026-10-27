@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -27,22 +28,24 @@ var ErrNotConfigured = errors.New("mihomo config file is not configured")
 
 // ConfigOptions 描述配置文件相关路径。
 type ConfigOptions struct {
-	ConfigPath   string
-	ProvidersDir string
-	BinaryPath   string
-	Group        string
-	TestURL      string
-	Reloader     *Client
+	ConfigPath     string
+	ProvidersDir   string
+	BinaryPath     string
+	Group          string
+	TestURL        string
+	ExclusionsPath string
+	Reloader       *Client
 }
 
 // ConfigEditor 负责读写 mihomo 配置文件（provider / 导入节点）并安全重载。
 type ConfigEditor struct {
-	configPath   string
-	providersDir string
-	binaryPath   string
-	group        string
-	testURL      string
-	reloader     *Client
+	configPath          string
+	providersDir        string
+	binaryPath          string
+	group               string
+	testURL             string
+	exclusionsPathValue string
+	reloader            *Client
 }
 
 // NewConfigEditor 创建配置编辑器。ConfigPath 为空时编辑器处于禁用状态。
@@ -61,12 +64,13 @@ func NewConfigEditor(options ConfigOptions) *ConfigEditor {
 		testURL = defaultTestURL
 	}
 	return &ConfigEditor{
-		configPath:   configPath,
-		providersDir: providersDir,
-		binaryPath:   strings.TrimSpace(options.BinaryPath),
-		group:        group,
-		testURL:      testURL,
-		reloader:     options.Reloader,
+		configPath:          configPath,
+		providersDir:        providersDir,
+		binaryPath:          strings.TrimSpace(options.BinaryPath),
+		group:               group,
+		testURL:             testURL,
+		exclusionsPathValue: strings.TrimSpace(options.ExclusionsPath),
+		reloader:            options.Reloader,
 	}
 }
 
@@ -206,6 +210,7 @@ func (e *ConfigEditor) RemoveProvider(name string) error {
 		return err
 	}
 	// 清理 provider 的缓存文件，避免残留失效订阅。
+	e.dropExclusions(name)
 	cached := filepath.Join(e.providersDir, name+".yaml")
 	if removeErr := os.Remove(cached); removeErr != nil && !os.IsNotExist(removeErr) {
 		return fmt.Errorf("remove provider cache: %w", removeErr)
@@ -696,17 +701,17 @@ func sanitizeProviderName(name string) string {
 	var builder strings.Builder
 	for _, char := range name {
 		switch {
-		case char >= 'a' && char <= 'z', char >= '0' && char <= '9', char == '-', char == '_':
+		case unicode.IsLetter(char), unicode.IsDigit(char), char == '-', char == '_':
 			builder.WriteRune(char)
 		case char == ' ':
 			builder.WriteRune('-')
 		}
 	}
-	result := strings.Trim(builder.String(), "-_")
-	if len(result) > 40 {
-		result = result[:40]
+	runes := []rune(strings.Trim(builder.String(), "-_"))
+	if len(runes) > 40 {
+		runes = runes[:40]
 	}
-	return result
+	return string(runes)
 }
 
 func shortHash(value string) string {

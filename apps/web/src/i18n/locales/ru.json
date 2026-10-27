@@ -5433,6 +5433,15 @@
     "delete_node_success": "Узел удалён",
     "delete_node_failed": "Не удалось удалить узел",
     "switch_success": "Переключено на {{name}}",
-    "switch_failed": "Не удалось переключить узел"
+    "switch_failed": "Не удалось переключить узел",
+    "group_strategy": "Группы",
+    "group_local": "Локальный импорт",
+    "group_inline": "Встроенные (config.yaml)",
+    "group_hidden": "скрыто: {{count}}",
+    "group_all_hidden": "Все узлы этого источника скрыты",
+    "restore_hidden": "Восстановить скрытые",
+    "restore_done": "Скрытые узлы восстановлены",
+    "restore_failed": "Не удалось восстановить",
+    "delete_sub_node_confirm": "Скрыть узел «{{name}}»? Он будет добавлен в exclude-filter подписки и останется скрытым после обновления."
   }
 }

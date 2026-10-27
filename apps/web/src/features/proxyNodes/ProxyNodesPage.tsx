@@ -80,7 +80,8 @@ function ProxyNodesContent() {
   const requestId = useRef(0);
 
   const base = featureAvailability.managerServiceBase;
-  const ready = featureAvailability.managerServiceAvailable && Boolean(base) && Boolean(managementKey);
+  const ready =
+    featureAvailability.managerServiceAvailable && Boolean(base) && Boolean(managementKey);
 
   useEffect(
     () => () => {
@@ -184,14 +185,18 @@ function ProxyNodesContent() {
   };
 
   const handleDeleteNode = (node: ProxyNode) => {
+    if (!node.provider) return;
+    const isImported = node.provider === IMPORTED_PROVIDER;
     showConfirmation({
       title: t('proxy_nodes.delete_node_title'),
-      message: t('proxy_nodes.delete_node_confirm', { name: node.name }),
+      message: isImported
+        ? t('proxy_nodes.delete_node_confirm', { name: node.name })
+        : t('proxy_nodes.delete_sub_node_confirm', { name: node.name }),
       variant: 'danger',
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await proxyNodesApi.removeNode(base, node.name, managementKey);
+          await proxyNodesApi.removeNode(base, node.provider as string, node.name, managementKey);
           showNotification(t('proxy_nodes.delete_node_success'), 'success');
           await load();
         } catch (err: unknown) {
@@ -200,6 +205,21 @@ function ProxyNodesContent() {
         }
       },
     });
+  };
+
+  const handleRestoreSource = async (source: ProxySource) => {
+    if (!ready || busySource) return;
+    setBusySource(source.name);
+    try {
+      await proxyNodesApi.restoreSource(base, source.name, managementKey);
+      showNotification(t('proxy_nodes.restore_done'), 'success');
+      await load();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showNotification(`${t('proxy_nodes.restore_failed')}: ${message}`, 'error');
+    } finally {
+      setBusySource('');
+    }
   };
 
   const handleUpdateSource = async (source: ProxySource) => {
@@ -241,6 +261,60 @@ function ProxyNodesContent() {
   const autoGroup = overview?.autoGroup ?? null;
   const autoMode = Boolean(autoGroup && selectedName === autoGroup.name);
   const canEdit = Boolean(overview?.canEdit);
+  const nodeGroups = useMemo(() => {
+    const byProvider = new Map<string, ProxyNode[]>();
+    const inline: ProxyNode[] = [];
+    nodes.forEach((node) => {
+      if (node.provider) {
+        const list = byProvider.get(node.provider) ?? [];
+        list.push(node);
+        byProvider.set(node.provider, list);
+      } else {
+        inline.push(node);
+      }
+    });
+
+    type Group = {
+      key: string;
+      label: string;
+      kind: 'local' | 'subscription' | 'inline';
+      source?: ProxySource;
+      excluded: number;
+      nodes: ProxyNode[];
+    };
+
+    const groups: Group[] = sources.map((source) => ({
+      key: source.name,
+      label: source.builtin ? t('proxy_nodes.group_local') : source.name,
+      kind: source.builtin ? 'local' : 'subscription',
+      source,
+      excluded: source.excluded?.length ?? 0,
+      nodes: byProvider.get(source.name) ?? [],
+    }));
+
+    byProvider.forEach((list, key) => {
+      if (groups.some((group) => group.key === key)) return;
+      groups.push({
+        key,
+        label: key,
+        kind: 'subscription',
+        excluded: 0,
+        nodes: list,
+      });
+    });
+
+    if (inline.length > 0) {
+      groups.push({
+        key: '__inline__',
+        label: t('proxy_nodes.group_inline'),
+        kind: 'inline',
+        excluded: 0,
+        nodes: inline,
+      });
+    }
+
+    return groups.filter((group) => group.nodes.length > 0 || group.excluded > 0);
+  }, [nodes, sources, t]);
   const lastUpdated = useMemo(() => {
     if (!overview?.collectedAt) return '';
     return new Date(overview.collectedAt).toLocaleTimeString();
@@ -329,47 +403,98 @@ function ProxyNodesContent() {
                 </div>
               </div>
 
-              <div className={styles.nodeGrid}>
-                {autoGroup && (
-                  <button
-                    type="button"
-                    className={`${styles.nodeCard} ${autoMode ? styles.nodeCardActive : ''}`}
-                    onClick={() => void handleSelect(autoGroup.name)}
-                    disabled={Boolean(pendingName)}
-                    aria-pressed={autoMode}
-                  >
-                    <div className={styles.nodeHead}>
-                      <span className={styles.nodeName}>{t('proxy_nodes.auto_mode')}</span>
-                      {autoMode ? (
-                        <span className={styles.selectedBadge}>
-                          <IconCheck size={12} />
-                          {t('proxy_nodes.in_use')}
+              {autoGroup && (
+                <div className={styles.nodeGroup}>
+                  <div className={styles.groupHeader}>
+                    <span className={styles.groupTitle}>
+                      {t('proxy_nodes.group_strategy')}
+                      <span className={styles.groupCount}>
+                        {t('proxy_nodes.source_nodes', { count: 1 })}
+                      </span>
+                    </span>
+                  </div>
+                  <div className={styles.nodeGrid}>
+                    <button
+                      type="button"
+                      className={`${styles.nodeCard} ${autoMode ? styles.nodeCardActive : ''}`}
+                      onClick={() => void handleSelect(autoGroup.name)}
+                      disabled={Boolean(pendingName)}
+                      aria-pressed={autoMode}
+                    >
+                      <div className={styles.nodeHead}>
+                        <span className={styles.nodeName}>{t('proxy_nodes.auto_mode')}</span>
+                        {autoMode ? (
+                          <span className={styles.selectedBadge}>
+                            <IconCheck size={12} />
+                            {t('proxy_nodes.in_use')}
+                          </span>
+                        ) : (
+                          <IconRotateCcw size={14} />
+                        )}
+                      </div>
+                      <div className={styles.nodeBadges}>
+                        <span className={styles.badge}>{protocolLabel(autoGroup.type)}</span>
+                        {autoGroup.now && (
+                          <span className={styles.badgeMuted}>{autoGroup.now}</span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {nodes.length === 0 && nodeGroups.length === 0 && (
+                <div className="hint">{t('proxy_nodes.empty')}</div>
+              )}
+
+              {nodeGroups.map((group) => (
+                <div key={group.key} className={styles.nodeGroup}>
+                  <div className={styles.groupHeader}>
+                    <span className={styles.groupTitle}>
+                      {group.label}
+                      <span className={styles.groupCount}>
+                        {t('proxy_nodes.source_nodes', { count: group.nodes.length })}
+                      </span>
+                      {group.excluded > 0 && (
+                        <span className={styles.groupHidden}>
+                          {t('proxy_nodes.group_hidden', { count: group.excluded })}
                         </span>
-                      ) : (
-                        <IconRotateCcw size={14} />
                       )}
+                    </span>
+                    {canEdit &&
+                      group.kind === 'subscription' &&
+                      group.excluded > 0 &&
+                      group.source && (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          loading={busySource === group.source.name}
+                          disabled={Boolean(busySource)}
+                          onClick={() => void handleRestoreSource(group.source as ProxySource)}
+                        >
+                          {t('proxy_nodes.restore_hidden')}
+                        </Button>
+                      )}
+                  </div>
+                  {group.nodes.length === 0 ? (
+                    <div className={styles.groupEmpty}>{t('proxy_nodes.group_all_hidden')}</div>
+                  ) : (
+                    <div className={styles.nodeGrid}>
+                      {group.nodes.map((node) => (
+                        <NodeCard
+                          key={node.name}
+                          node={node}
+                          switching={pendingName === node.name}
+                          disabled={Boolean(pendingName) || checking}
+                          deletable={canEdit && Boolean(node.provider)}
+                          onSelect={() => void handleSelect(node.name)}
+                          onDelete={() => handleDeleteNode(node)}
+                        />
+                      ))}
                     </div>
-                    <div className={styles.nodeBadges}>
-                      <span className={styles.badge}>{protocolLabel(autoGroup.type)}</span>
-                      {autoGroup.now && <span className={styles.badgeMuted}>{autoGroup.now}</span>}
-                    </div>
-                  </button>
-                )}
-
-                {nodes.map((node) => (
-                  <NodeCard
-                    key={node.name}
-                    node={node}
-                    switching={pendingName === node.name}
-                    disabled={Boolean(pendingName) || checking}
-                    deletable={canEdit && node.provider === IMPORTED_PROVIDER}
-                    onSelect={() => void handleSelect(node.name)}
-                    onDelete={() => handleDeleteNode(node)}
-                  />
-                ))}
-              </div>
-
-              {nodes.length === 0 && <div className="hint">{t('proxy_nodes.empty')}</div>}
+                  )}
+                </div>
+              ))}
 
               <div className={styles.footer}>
                 <IconSatellite size={14} />
@@ -519,9 +644,7 @@ function NodeCard({
             {t('proxy_nodes.in_use')}
           </span>
         )}
-        {!node.alive && (
-          <span className={styles.badgeDanger}>{t('proxy_nodes.unhealthy')}</span>
-        )}
+        {!node.alive && <span className={styles.badgeDanger}>{t('proxy_nodes.unhealthy')}</span>}
       </div>
       {deletable && (
         <button
@@ -651,7 +774,12 @@ function ImportDrawer({
       }
     >
       <div className={styles.drawerBody}>
-        <SegmentedTabs items={tabs} activeTab={tab} onChange={setTab} ariaLabel={t('proxy_nodes.import_title')} />
+        <SegmentedTabs
+          items={tabs}
+          activeTab={tab}
+          onChange={setTab}
+          ariaLabel={t('proxy_nodes.import_title')}
+        />
 
         {tab === 'subscription' && (
           <div className={styles.form}>

@@ -5429,6 +5429,15 @@
     "delete_node_success": "节点已删除",
     "delete_node_failed": "删除节点失败",
     "switch_success": "已切换到 {{name}}",
-    "switch_failed": "切换节点失败"
+    "switch_failed": "切换节点失败",
+    "group_strategy": "策略组",
+    "group_local": "本地导入",
+    "group_inline": "内置节点（config.yaml）",
+    "group_hidden": "{{count}} 个已隐藏",
+    "group_all_hidden": "该来源的节点已全部隐藏",
+    "restore_hidden": "恢复已隐藏",
+    "restore_done": "已恢复隐藏的节点",
+    "restore_failed": "恢复失败",
+    "delete_sub_node_confirm": "确定隐藏节点「{{name}}」？该节点会被写入订阅的排除规则，重新拉取订阅后依然隐藏。"
   }
 }
